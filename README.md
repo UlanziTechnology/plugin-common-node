@@ -1,7 +1,7 @@
 # ulanzideck-plugin-sdk-node
 
 <p align="start">
-   <strong>English</strong> | <a href="/common-node/README.zh.md">简体中文</a>
+   <strong>English</strong> | <a href="./README.zh.md">简体中文</a>
 </p>
 
 ## Introduction
