@@ -15,7 +15,7 @@ The current version is developed according to the Ulanzi JS Plugin Development P
 
 ## File directory
 ```bash
-ulanzideck-api   //ulanzideck-plugin-sdk node package
+plugin-common-node   //ulanzideck-plugin-sdk node package
 ├── libs
 │   ├── constants.js      //Event constants of the UlanziDeck
 │   ├── randomPort.js      //Generate a random port for the node service
@@ -29,7 +29,7 @@ ulanzideck-api   //ulanzideck-plugin-sdk node package
 
 ### Some instructions and conventions
 
-1. The main service of the plugin library (for example app.j's) will always be connected to the host computer. Implement the main functions of the plugin, receive changes to action's params, update the status of icons, etc.
+1. The main service of the plugin library (for example app.j's) will always be connected to the UlanziDeck. Implement the main functions of the plugin, receive changes to action's params, update the status of icons, etc.
 
 2. The action of the plugin library (for example inspector.html). The page will be destroyed after toggling the UlanziDeck button, so it is not appropriate to do functional processing. It is mainly used to send params to UlanziDeck and synchronize params from UlanziDeck.
 
@@ -39,7 +39,9 @@ ulanzideck-api   //ulanzideck-plugin-sdk node package
 
 5. The uuid of the action connection must be greater than 4 for differentiation. Example: com.ulanzi.ulanzideck.pluginname.pluginaction
 
-6. When using node as the main service, in order to avoid port conflicts, use the RandomPort provided by ulanzideck-api to generate ports. For details, see [<a href="#title-2">2. Generate random port</a>]
+6. When using node as the main service, in order to avoid port conflicts, use the RandomPort provided by plugin-common-node to generate ports. For details, see [<a href="#title-2">2. Generate random port</a>]
+
+7. Due to the difference between the local node environment and the host node environment, and some bugs that will occur when the local path is obtained after the program is packaged, we provide the <strong>Utils.getPluginPath()</strong> method to obtain the local path of the plugin root, which you can use as needed. For details, see [<a href="#title-3">3. Get the path to the root directory of the plugin</a>]
 
 
 ### How to use
@@ -61,9 +63,9 @@ An action function may be configured on multiple keys, so the ulanzideck-plugin-
 
 #### 1. Install
 
-```bash
-npm install ulanzideck-api --save
-```
+1. Copy the <strong>plugin-common-node</strong> folder to the running directory.
+2. <strong>plugin-common-node</strong> is based on <strong>ws</strong>, so you need to install <strong>ws</strong> dependency packages in the project root directory.
+3. Then you can reference it according to the location of the folder.
 
 #### <span id="title-2">2. Generate random port</span>
 
@@ -72,7 +74,7 @@ The HTML of the action can be connected to the main node service by introducing 
 
 
 ```js
-import { RandomPort } from 'ulanzideck-api';
+import { RandomPort } from './actions/plugin-common-node/index.js';
 
 const generatePort = new RandomPort(); 
 
@@ -81,46 +83,67 @@ const port = generatePort.getPort();
 
 ```
 
-#### 3. Connect the UlanziDeck
-Take the action's html page as an example to briefly demonstrate some methods. For details, please see[<a href="#title-4">4. Receive events(UlanziDeck->plugin)</a>][<a href="#title-5">5. Send Events(plugin->UlanziDeck)</a>]
 
+#### <span id="title-3">3. Get the path to the root directory of the plugin</span>
 
-```html
+The <strong>Utils.getPluginPath()</strong> method can obtain the local path of the root directory of the plugin, which is compatible with Windows and Mac systems, and can be used as needed.
 
-/**
- * $UD is an instance of the ulanzideckApi that connects to the UlanziDeck's websocket via $UD.connect(uuid).
- * 
-*/
+```js
+import { Utils } from './actions/plugin-common-node/index.js';
 
-<script>
-  //Connect to the websocket of the UlanziDeck. After successful connection, the event onConnected will be triggered
-  $UD.connect('com.ulanzi.ulanzideck.analogclock.clock');
-  $UD.onConnected(conn => {
-    //Connected, dynamic nodes can be rendered here
+//获取根目录文件路径
+const _pluginPath = Utils.getPluginPath()
 
-  })
-
-
-  //Drag to the button
-  $UD.onAdd( message => {
-    //Overloading of form can be implemented here.  Utils.setFormValue(message.param,form)
-  })
-
-  //Get initialization parameters
-  $UD.onParamFromApp( message => {
-      //Overloading of form can be implemented here.  Utils.setFormValue(message.param,form)
-  })
-
-  //Send parameters
-  function sendData(params){
-    $UD.sendParamFromPlugin(params)
-  }
-
-</script>
+console.log('Plugin path: ', _pluginPath)
 
 ```
 
-#### <span id="title-4" >4. Receive events(UlanziDeck->plugin)</span>
+
+
+#### 4. Connect the UlanziDeck
+Take the action's html page as an example to briefly demonstrate some methods. For details, please see[<a href="#title-5">5. Receive events(UlanziDeck->plugin)</a>][<a href="#title-6">6. Send Events(plugin->UlanziDeck)</a>]
+```js
+  import { UlanzideckApi } from './actions/plugin-common-node/index.js';;
+
+  const $UD = new UlanzideckApi();
+  //Connect to the websocket of the UlanziDeck. After successful connection, the event onConnected will be triggered
+  $UD.connect('com.ulanzi.ulanzideck.teamspeak5');
+
+  $UD.onConnected(conn => {
+    //Connected
+  })
+
+  //Receive events when action is dragged into the keyboard
+  $UD.onAdd( message => {
+    //Save the action instance
+  })
+
+  //Receive the action initialization parameters
+  $UD.onParamFromApp( message => {
+      //Save action initialization parameters
+  })
+
+
+  //Receive plugin clear events
+  $UD.onClear( message => {
+    if(message.param){
+      for(let i = 0; i<message.param.length; i++){
+        const context = message.param[i].context
+        console.log('===context clear', context)
+
+      }
+    }
+  })
+
+  //Set the UlanziDeck icon
+  function serIcon(context, data, text){
+    $UD.setBaseDataIcon(context, data, text) 
+  }
+
+
+```
+
+#### <span id="title-5" >5. Receive events(UlanziDeck->plugin)</span>
 ```js
 /**
  * Listen for events from websocket connections and events from the UlanziDeck
@@ -138,7 +161,7 @@ Take the action's html page as an example to briefly demonstrate some methods. F
 
 ```
 
-#### <span id="title-5">5. Send Events(plugin->UlanziDeck)</span>
+#### <span id="title-6">6. Send Events(plugin->UlanziDeck)</span>
 
 ```js
 /**
@@ -221,6 +244,17 @@ Take the action's html page as an example to briefly demonstrate some methods. F
  * @param {local} boolean Optional | true if it is a local path
 */
 10. $UD.openUrl(url, local) 
+
+
+/**
+ * Request the UlanziDeck to display a pop-up window; After the pop-up window, test.html needs to actively close it, and test to window.close() to notify the pop-up window to close
+ *  @param {string} url Required | Local HTML path
+ * @param {string} width Optional | Window width, default 200
+ * @param {string} height Optional | Window height, default 200
+ * @param {string} x Optional | The x coordinate of the window. If no value is passed, it will be centered by default.
+ * @param {string} y Optional | The y coordinate of the window. If no value is passed, it will be centered by default.
+*/
+11. $UD.openView(url, width = 200, height = 200, x , y ) 
 
 
 

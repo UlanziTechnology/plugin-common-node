@@ -16,7 +16,7 @@
 
 ## 文件介绍
 ```bash
-ulanzideck-api   //通用node包
+plugin-common-node   //通用node包
 ├── libs
 │   ├── constants.js      //上位机的事件常量，无需二次编写
 │   ├── randomPort.js      //生成随机端口
@@ -40,13 +40,15 @@ ulanzideck-api   //通用node包
 
 5. 配置项连接的uuid要大于4用于区分。例：com.ulanzi.ulanzideck.插件名.插件action
 
-6. 在使用node来做主服务时，为了避免端口冲突，请通过 ulanzideck-api 提供的 RandomPort 来生成端口。具体可查看[<a href="#title-2">2. 生成随机端口</a>]
+6. 在使用node来做主服务时，为了避免端口冲突，请通过 plugin-common-node 提供的 RandomPort 来生成端口。具体可查看[<a href="#title-2">2. 生成随机端口</a>]
+
+7. 由于本地的node环境和上位机node环境运行的区别，以及程序打包之后获取本地路径会出现一些的bug，因此我们提供Utils.getPluginPath()方法来获取插件根目录的本地路径，大家按需使用。具体可查看[<a href="#title-3">3. 获取插件根目录的路径</a>]
 
 ### 使用步骤
+
 ```bash
-
+SDK(node版本)的具体使用和文件夹规范，可以查看 demo/com.ulanzi.teamspeak5.ulanziPlugin 的实现。
 以下简单介绍通用库的使用：
-
 ```
 #### * 特殊参数 context
 由于一个action功能会配置到多个按键key上，因此common库为大家拼接了一个唯一值context。在我们创建功能实例的时候，只需保存唯一值context。若需要更新数据时，再根据对应的唯一值context，即可将消息发送到对应的key值上。
@@ -61,11 +63,12 @@ ulanzideck-api   //通用node包
 
 ```
 
-#### 1. 安装
+#### 1. 下载引用
 
-```bash
-npm install ulanzideck-api --save
-```
+1. 将plugin-common-node下载到本地，并将文件夹复制到运行目录下。
+2. plugin-common-node 基于 ws ，因此需要在项目根目录中安装ws依赖包。
+3. 然后根据文件夹的位置来引用即可。
+
 
 #### <span id="title-2">2. 生成随机端口</span>
 调用随机生成接口的方法getPort()之后，将在插件主服务下会自动生成ws-port.js ，该js文件内容为 window.__port = 端口号;
@@ -73,7 +76,7 @@ action的html可以通过引入'ws-port.js"文件，获得主服务的端口，�
 
 
 ```js
-import { RandomPort } from 'ulanzideck-api';
+import { RandomPort } from './actions/plugin-common-node/index.js';
 
 const generatePort = new RandomPort(); 
 
@@ -82,27 +85,42 @@ const port = generatePort.getPort();
 
 ```
 
-#### 3. 连接上位机
-以下简单展示一些方法的使用，具体可查看[<a href="#title-4">4.接收事件 上位机->插件</a>][<a href="#title-5">5.发送事件 插件->上位机</a>]
+
+#### <span id="title-3">3. 获取插件根目录的路径</span>
+
+Utils.getPluginPath()方法可以获取插件根目录的本地路径，兼容Windows和Mac系统，大家按需使用。
+
 ```js
-  import { UlanzideckApi } from 'ulanzideck-api';
+import { Utils } from './actions/plugin-common-node/index.js';
+
+//获取根目录文件路径
+const _pluginPath = Utils.getPluginPath()
+
+console.log('Plugin path: ', _pluginPath)
+
+```
+
+#### 4. 连接上位机
+以下简单展示一些方法的使用，具体可查看[<a href="#title-5">5. 接收事件 上位机->插件</a>][<a href="#title-6">6. 发送事件 插件->上位机</a>]
+```js
+  import { UlanzideckApi } from './actions/plugin-common-node/index.js';;
 
   const $UD = new UlanzideckApi();
   //连接socket，连接成功后，会触发事件onConnected
-  $UD.connect('com.ulanzi.ulanzideck.analogclock');
+  $UD.connect('com.ulanzi.ulanzideck.teamspeak5');
 
   $UD.onConnected(conn => {
     //表示已连接
   })
 
-  //配置到按键
+  //接收action拖入键盘的事件
   $UD.onAdd( message => {
-    //实现功能，同步配置项数据
+    //保存action实例
   })
 
-  //获取初始化参数
+  //接收action初始化参数
   $UD.onParamFromApp( message => {
-      //实现功能，同步配置项数据
+      //保存action初始化参数
   })
 
 
@@ -126,7 +144,7 @@ const port = generatePort.getPort();
 
 ```
 
-#### <a id="title-4">4. 接收事件 上位机->插件</a>
+#### <a id="title-5">5. 接收事件 上位机->插件</a>
 ```js
 /**
  * 监听websocket连接事件，以及上位机发出的事件
@@ -145,7 +163,7 @@ const port = generatePort.getPort();
 
 ```
 
-#### <a id="title-5">5. 发送事件 插件->上位机</a>
+#### <a id="title-6">6. 发送事件 插件->上位机</a>
 
 ```js
 /**
@@ -232,9 +250,13 @@ const port = generatePort.getPort();
 
 /**
  * 请求上位机机显⽰弹窗；弹窗后，test.html需要主动关闭，测试到window.close()可以通知弹窗关闭
- *  @param {string} url 必传 | 本地html路径  (即将废弃， openUrl 方法已满足大多数打开链接的场景。若需要弹窗场景，我们后续会更新弹窗组件库，请关注)
+ *  @param {string} url 必传 | 本地html路径 
+ * @param {string} width 可选 | 窗口宽度，默认200
+ * @param {string} height 可选 | 窗口高度，默认200
+ * @param {string} x 可选 | 窗口x坐标，不传值默认居中
+ * @param {string} y 可选 | 窗口y坐标，不传值默认居中
 */
-11. $UD.openView(url, width = 200, height = 200, x = 100, y = 100) 
+11. $UD.openView(url, width = 200, height = 200, x , y ) 
 
 
 ```
