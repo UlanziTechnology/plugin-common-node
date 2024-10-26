@@ -29,7 +29,7 @@ plugin-common-node   //ulanzideck-plugin-sdk node package
 
 ### Some instructions and conventions
 
-1. The main service of the plugin library (for example app.j's) will always be connected to the UlanziDeck. Implement the main functions of the plugin, receive changes to action's params, update the status of icons, etc.
+1. The main service of the plugin library (for example app.js) will always be connected to the UlanziDeck. Implement the main functions of the plugin, receive changes to action's params, update the status of icons, etc.
 
 2. The action of the plugin library (for example inspector.html). The page will be destroyed after toggling the UlanziDeck button, so it is not appropriate to do functional processing. It is mainly used to send params to UlanziDeck and synchronize params from UlanziDeck.
 
@@ -63,7 +63,7 @@ An action function may be configured on multiple keys, so the ulanzideck-plugin-
 
 #### 1. Install
 
-1. Copy the <strong>plugin-common-node</strong> folder to the running directory.
+1. Download <strong>plugin-common-node</strong> locally and copy the folder to the running directory.
 2. <strong>plugin-common-node</strong> is based on <strong>ws</strong>, so you need to install <strong>ws</strong> dependency packages in the project root directory.
 3. Then you can reference it according to the location of the folder.
 
