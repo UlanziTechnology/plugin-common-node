@@ -213,27 +213,31 @@ class UlanzideckApi extends EventEmitter {
     })
   }
 
-  /**
+   /**
    * 请求上位机使⽤浏览器打开url
-   * @param {string} url 必传 | 直接远程地址和本地地址，⽀持打开插件根⽬录下的url链接（以/ ./ 起始的链接）
+   * @param {string} url 必传 | 直接远程地址和本地地址，⽀持打开插件根⽬录下的url链接（以/ ./ 起始的链接）。
+   *                           只能是基本路径，不能带参数，需要带参数请设置在param值里面
    * @param {local} boolean 可选 | 若为本地地址为true
+   * @param {object} param 可选 | 路径的参数值
   */
-  openUrl(url, local) {
+   openUrl(url, local, param) {
     this.send(Events.OPENURL, {
       url,
-      local: local ? true : false
+      local: local ? true : false,
+      param: param ? param : null
     })
   }
 
   /**
    * 请求上位机机显⽰弹窗；弹窗后，test.html需要主动关闭，测试到window.close()可以通知弹窗关闭
-   *  @param {string} url 必传 | 本地html路径 
+   *  @param {string} url 必传 | 本地html路径，只能是基本路径，不能带参数，需要带参数请设置在param值里面
    * @param {string} width 可选 | 窗口宽度，默认200
    * @param {string} height 可选 | 窗口高度，默认200
    * @param {string} x 可选 | 窗口x坐标，不传值默认居中
    * @param {string} y 可选 | 窗口y坐标，不传值默认居中
+   * @param {object} param 可选 | 路径的参数值
   */
-  openView(url, width = 200, height = 200, x, y) {
+  openView(url, width = 200, height = 200, x, y, param) {
     const params = {
       url,
       width,
@@ -244,6 +248,9 @@ class UlanzideckApi extends EventEmitter {
     }
     if(y){
       params.y = y
+    }
+    if(param){
+      params.param = param
     }
     this.send(Events.OPENVIEW, params)
   }

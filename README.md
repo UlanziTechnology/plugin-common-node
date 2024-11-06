@@ -9,7 +9,7 @@ The ulanzideck-plugin-sdk encapsulates the WebSocket connection with the UlanziD
 
 
 ```bash
-The current version is developed according to the Ulanzi JS Plugin Development Protocol - V1.2.1.
+The current version is developed according to the Ulanzi JS Plugin Development Protocol - V1.2.2.
 ```
 
 
@@ -241,20 +241,23 @@ Take the action's html page as an example to briefly demonstrate some methods. F
 /**
  * Request the UlanziDeck to use the browser to open the url
  * @param {string} url Required | Supports remote paths and local paths, supports opening url links under the plug-in root directory (links starting with / ./)
+ *                                It can only be the basic path and cannot take parameters. If you need to take parameters, please set them in the param value.
  * @param {local} boolean Optional | true if it is a local path
+ * @param {object} param Optional | Parameter values of the path.
 */
-10. $UD.openUrl(url, local) 
+10. $UD.openUrl(url, local, param)
 
 
 /**
  * Request the UlanziDeck to display a pop-up window; After the pop-up window, test.html needs to actively close it, and test to window.close() to notify the pop-up window to close
- *  @param {string} url Required | Local HTML path
+ *  @param {string} url Required | Local HTML path. It can only be the basic path and cannot take parameters. If you need to take parameters, please set them in the param value.
  * @param {string} width Optional | Window width, default 200
  * @param {string} height Optional | Window height, default 200
  * @param {string} x Optional | The x coordinate of the window. If no value is passed, it will be centered by default.
  * @param {string} y Optional | The y coordinate of the window. If no value is passed, it will be centered by default.
+ * @param {object} param Optional | Parameter values of the path.
 */
-11. $UD.openView(url, width = 200, height = 200, x , y ) 
+11. $UD.openView(url, width = 200, height = 200, x , y, param)
 
 
 
