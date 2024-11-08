@@ -395,7 +395,7 @@ class UlanzideckApi extends EventEmitter {
           uuid,
           key,
           actionid,
-          type: 3,
+          type: 4,
           gifpath,
           textData: text || '',
           showtext: text ? true : false
