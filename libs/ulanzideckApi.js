@@ -407,6 +407,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 监听socket连接事件
+   * @param {import('../apiTypes.d.ts').OnConnected} fn
   */
   onConnected(fn) {
     if (!fn) {
@@ -422,6 +423,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 监听socket断开事件
+   * @param {import('../apiTypes.d.ts').OnClose} fn 
   */
   onClose(fn) {
     if (!fn) {
@@ -437,6 +439,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 监听socket错误事件
+   * @param {import('../apiTypes.d.ts').OnError} fn
   */
   onError(fn) {
     if (!fn) {
@@ -452,6 +455,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 接收上位机事件：add
+   * @param {import('../apiTypes.d.ts').OnCmdAddResp} fn 
   */
   onAdd(fn) {
     if (!fn) {
@@ -467,6 +471,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 接收上位机事件：paramfromapp
+   * @param {import('../apiTypes.d.ts').OnCmdParamFromAppResp} fn 
   */
   onParamFromApp(fn) {
     if (!fn) {
@@ -481,6 +486,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 接收上位机事件：paramfromplugin
+   * @param {import('../apiTypes.d.ts').OnCmdParamFromPluginResp} fn
   */
   onParamFromPlugin(fn) {
     if (!fn) {
@@ -495,6 +501,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 接收上位机事件：run
+   * @param {import('../apiTypes.d.ts').OnCmdRunResp} fn
   */
   onRun(fn) {
     if (!fn) {
@@ -509,6 +516,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 接收上位机事件：setactive
+   * @param {import('../apiTypes.d.ts').OnCmdSetActiveResp} fn 
   */
   onSetActive(fn) {
     if (!fn) {
@@ -523,6 +531,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 接收上位机事件：clear
+   * @param {import('../apiTypes.d.ts').OnCmdClearResp} fn
   */
   onClear(fn) {
     if (!fn) {
@@ -537,6 +546,7 @@ class UlanzideckApi extends EventEmitter {
 
   /**
    * 接收上位机事件：返回选择弹窗结果
+   * @param {import('../apiTypes.d.ts').OnCmdSelectDialogResp} fn 
   */
   onSelectdialog(fn) {
     if (!fn) {
