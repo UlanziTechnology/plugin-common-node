@@ -123,6 +123,22 @@ class UlanziUtils {
 	}
 
 	/**
+	  * 适配语言环境
+   */
+	adaptLanguage(ln) {
+		let userLanguage = ln;
+		if (ln.indexOf('zh') == 0) {
+			userLanguage = 'zh_CN'
+		} else if (ln.indexOf('en') == 0) {
+			userLanguage = 'en'
+		} else if (userLanguage.indexOf('-') !== -1) {
+			userLanguage = userLanguage.split('-')[0];
+		}
+
+		return userLanguage
+	}
+
+	/**
    * 获取插件根目录路径
    */
 	getPluginPath(){

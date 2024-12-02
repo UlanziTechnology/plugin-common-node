@@ -28,10 +28,11 @@ class UlanzideckApi extends EventEmitter {
   connect(uuid, port = 3906, address = '127.0.0.1') {
     
     //动态获取ip和端口
-    const [ argv_address, argv_port ] = process.argv.splice(2);
+    const [ argv_address, argv_port, argv_language ] = process.argv.splice(2);
 
     this.address = argv_address || address;
     this.port = argv_port || port;
+    this.language = Utils.adaptLanguage(argv_language || 'en')
 
     this.uuid = uuid;
 
