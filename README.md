@@ -1,264 +1,457 @@
-# ulanzideck-plugin-sdk-node
+# ulanzistudio-plugin-sdk-node
 
 <p align="start">
    <strong>English</strong> | <a href="./README.zh.md">简体中文</a>
 </p>
 
 ## Introduction
-The ulanzideck-plugin-sdk encapsulates the WebSocket connection with the UlanziDeck and its related communication events. This simplifies the development process and enables developers to communicate with the UlanziDeck through simple event calls, allowing them to focus more on the development of plugin functions.
 
+The ulanzistudio-plugin-sdk encapsulates the WebSocket connection with the UlanziStudio and its related communication events. This simplifies the development process and enables developers to communicate with the UlanziStudio through simple event calls, allowing them to focus more on the development of plugin functions.
+
+> Current version is developed according to the **Ulanzi JS Plugin Development Protocol - V2.1.2**.
+
+For `manifest.json` configuration reference, see **[manifest.md](https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK/blob/main/manifest.md)**.
+
+---
+
+## File Directory
+
+```
+plugin-common-node/
+├── libs/
+│   ├── constants.js   // Frozen event-name constants (Events.*) used throughout the SDK
+│   ├── randomPort.js  // Generates a random WebSocket port and writes ws-port.js for HTML pages to consume
+│   ├── utils.js       // Helper utilities: plugin path, system type detection, JSON parsing, etc.
+│   └── ulanziApi.js   // Main SDK class. Encapsulates all UlanziStudio events and WebSocket connection.
+├── apiTypes.d.ts      // TypeScript type definitions for IDE autocompletion
+└── index.js           // Package entry point — exports UlanziApi, Utils, RandomPort
+```
+
+---
+
+## Instructions & Conventions
+
+1. **Main service** (`app.js`) stays connected to the UlanziStudio at all times. It implements the plugin's core logic, receives param changes from actions, and updates icon states.
+
+2. **Action / PropertyInspector** (`inspector.html`) is destroyed when the user switches buttons. Keep it lightweight — only use it to send/receive configuration params.
+
+3. Plugin package naming: `com.ulanzi.{pluginName}.ulanziPlugin`
+
+4. The **main service UUID** must have exactly **4** dot-separated segments:
+   `com.ulanzi.ulanzistudio.{pluginName}`
+
+5. An **action UUID** must have **more than 4** segments to be distinguished from the main service:
+   `com.ulanzi.ulanzistudio.{pluginName}.{actionName}`
+
+6. When using Node.js as the main service, use `RandomPort` to avoid port conflicts between plugins. See [2. Generate Random Port](#2-generate-random-port).
+
+7. Use `Utils.getPluginPath()` to get the plugin root directory path — it handles differences between local Node and the host's packaged Node environment. See [3. Get Plugin Root Path](#3-get-plugin-root-path).
+
+---
+
+## How to Use
+
+### Special Parameter: `context`
+
+Because the same action can be assigned to multiple keys, the SDK generates a unique **`context`** string per key instance and appends it to every received message.
+
+- **Format:** `uuid + '___' + key + '___' + actionid`
+- **Encode:** `$UD.encodeContext(msg)` → returns a context string
+- **Decode:** `$UD.decodeContext(context)` → returns `{ uuid, key, actionid }`
+- For the `clear` event, `context` is spliced into each item of the `param` array. Iterate over `message.param` to retrieve individual contexts.
+
+---
+
+### 1. Install
 
 ```bash
-The current version is developed according to the Ulanzi JS Plugin Development Protocol - V1.2.2.
+npm install ws
 ```
 
-
-## File directory
-```bash
-plugin-common-node   //ulanzideck-plugin-sdk node package
-├── libs
-│   ├── constants.js      //Event constants of the UlanziDeck
-│   ├── randomPort.js      //Generate a random port for the node service
-│   ├── utils.js          //Encapsulation of some common methods
-│   └── ulanziApi.js    //This includes the encapsulation of all UlanziDeck events, websocket connection
-├── index.js  //Entry file
-```
-
-
-## Instructions
-
-### Some instructions and conventions
-
-1. The main service of the plugin library (for example app.js) will always be connected to the UlanziDeck. Implement the main functions of the plugin, receive changes to action's params, update the status of icons, etc.
-
-2. The action of the plugin library (for example inspector.html). The page will be destroyed after toggling the UlanziDeck button, so it is not appropriate to do functional processing. It is mainly used to send params to UlanziDeck and synchronize params from UlanziDeck.
-
-3. For unified management, the name of our plugin package is com.ulanzi.pluginname.ulanziPlugin
-
-4. For the normal use of the ulanzideck-plugin-sdk library, we agree that the uuid length of the main service connection is 4. Example: com.ulanzi.ulanzideck.pluginname
-
-5. The uuid of the action connection must be greater than 4 for differentiation. Example: com.ulanzi.ulanzideck.pluginname.pluginaction
-
-6. When using node as the main service, in order to avoid port conflicts, use the RandomPort provided by plugin-common-node to generate ports. For details, see [<a href="#title-2">2. Generate random port</a>]
-
-7. Due to the difference between the local node environment and the host node environment, and some bugs that will occur when the local path is obtained after the program is packaged, we provide the <strong>Utils.getPluginPath()</strong> method to obtain the local path of the plugin root, which you can use as needed. For details, see [<a href="#title-3">3. Get the path to the root directory of the plugin</a>]
-
-
-### How to use
-
-#### * context （A special parameter）
-
-An action function may be configured on multiple keys, so the ulanzideck-plugin-sdk library concatenates a unique value <strong>context</strong>. When we create a feature instance, we only need to save the unique value <strong>context</strong>. If you need to update the data, you can send the message to the corresponding key value based on the corresponding unique value <strong>context</strong>.
-
-```bash
-1. The special parameter context, which is a unique value concatenated from the common library, is passed to the main service and action along with the received message。
-
-2. The concatenation rule for context is uuid + '___' + key + '__' + actionid, generated by the corresponding $UD.encodeContext(msg).
-
-3. We also provide $UD.decodeContext(context) to deconstruct unique values and return { uuid, key, actionid }.
-
-4. Since the param of the clear event is in the form of an array, the context of clear is spliced ​​into the param. Please pay attention to loop acquisition when doing clear processing.
-
-```
-
-#### 1. Install
-
-1. Download <strong>plugin-common-node</strong> locally and copy the folder to the running directory.
-2. <strong>plugin-common-node</strong> is based on <strong>ws</strong>, so you need to install <strong>ws</strong> dependency packages in the project root directory.
-3. Then you can reference it according to the location of the folder.
-
-#### <span id="title-2">2. Generate random port</span>
-
-After calling the method <strong>getPort()</strong> of the randomly generated interface, a ws-port.js will be automatically generated under the main service of the plugin, and the content of the js file is <strong>window.__port = port number</strong>;
-The HTML of the action can be connected to the main node service by introducing a 'ws-port.js' file to get the port of the main service
-
+Copy the `plugin-common-node` folder into your plugin's runtime directory, then import from it:
 
 ```js
-import { RandomPort } from './actions/plugin-common-node/index.js';
-
-const generatePort = new RandomPort(); 
-
-//Generate random port
-const port = generatePort.getPort(); 
-
+import UlanziApi, { Utils, RandomPort } from './plugin-common-node/index.js';
 ```
 
+---
 
-#### <span id="title-3">3. Get the path to the root directory of the plugin</span>
+### 2. Generate Random Port
 
-The <strong>Utils.getPluginPath()</strong> method can obtain the local path of the root directory of the plugin, which is compatible with Windows and Mac systems, and can be used as needed.
+When Node.js is the main service, it needs a WebSocket server port that the PropertyInspector HTML pages can connect to. Call `getPort()` once at startup — it generates a random port and writes it to `ws-port.js` in the plugin root directory. The HTML pages include this file to read the port.
 
 ```js
-import { Utils } from './actions/plugin-common-node/index.js';
+import { RandomPort } from './plugin-common-node/index.js';
 
-//获取根目录文件路径
-const _pluginPath = Utils.getPluginPath()
-
-console.log('Plugin path: ', _pluginPath)
-
+const randomPort = new RandomPort();
+const port = randomPort.getPort(); // generates port and writes ws-port.js
 ```
 
+In the PropertyInspector HTML, include the generated file before connecting:
 
+```html
+<script src="../../ws-port.js"></script>
+<script>
+  $UD.connect('com.ulanzi.ulanzistudio.myplugin.myaction', window.__port);
+</script>
+```
 
-#### 4. Connect the UlanziDeck
-Take the action's html page as an example to briefly demonstrate some methods. For details, please see[<a href="#title-5">5. Receive events(UlanziDeck->plugin)</a>][<a href="#title-6">6. Send Events(plugin->UlanziDeck)</a>]
+`RandomPort` constructor accepts optional `minPort` (default `49152`) and `maxPort` (default `65535`).
+
+---
+
+### 3. Get Plugin Root Path
+
+`Utils.getPluginPath()` returns the absolute path to the plugin root directory (the folder ending with `ulanziPlugin`). Compatible with Windows and macOS.
+
 ```js
-  import { UlanzideckApi } from './actions/plugin-common-node/index.js';;
+import { Utils } from './plugin-common-node/index.js';
 
-  const $UD = new UlanzideckApi();
-  //Connect to the websocket of the UlanziDeck. After successful connection, the event onConnected will be triggered
-  $UD.connect('com.ulanzi.ulanzideck.teamspeak5');
+const pluginPath = Utils.getPluginPath();
+console.log('Plugin root:', pluginPath);
 
-  $UD.onConnected(conn => {
-    //Connected
-  })
+// Example: read a local config file
+import { promises as fs } from 'fs';
+const config = JSON.parse(await fs.readFile(`${pluginPath}/config.json`, 'utf8'));
+```
 
-  //Receive events when action is dragged into the keyboard
-  $UD.onAdd( message => {
-    //Save the action instance
-  })
+---
 
-  //Receive the action initialization parameters
-  $UD.onParamFromApp( message => {
-      //Save action initialization parameters
-  })
+### 4. Connect to UlanziStudio
 
+Connection parameters are read from `process.argv` when launched by the host application:
+- `process.argv[2]` → address (default `127.0.0.1`)
+- `process.argv[3]` → port (default `3906`)
+- `process.argv[4]` → language (default `en`)
 
-  //Receive plugin clear events
-  $UD.onClear( message => {
-    if(message.param){
-      for(let i = 0; i<message.param.length; i++){
-        const context = message.param[i].context
-        console.log('===context clear', context)
+```js
+import UlanziApi from './plugin-common-node/index.js';
 
-      }
+const $UD = new UlanziApi();
+
+// Connect — argv params take precedence over defaults
+$UD.connect('com.ulanzi.ulanzistudio.myplugin');
+
+$UD.onConnected(conn => {
+  console.log('Connected');
+});
+
+$UD.onAdd(message => {
+  // Action assigned to a key; message.context is the unique key identifier
+  const context = message.context;
+});
+
+$UD.onParamFromApp(message => {
+  // Host pushed saved params; use message.param
+});
+
+$UD.onClear(message => {
+  // message.param is an array; context is in each item
+  if (message.param) {
+    for (const item of message.param) {
+      console.log('cleared context:', item.context);
     }
-  })
-
-  //Set the UlanziDeck icon
-  function serIcon(context, data, text){
-    $UD.setBaseDataIcon(context, data, text) 
   }
-
-
+});
 ```
 
-#### <span id="title-5" >5. Receive events(UlanziDeck->plugin)</span>
-```js
-/**
- * Listen for events from websocket connections and events from the UlanziDeck
-*/
-1. $UD.onConnected(conn => ())  //The websocket connection to the UlanziDeck is successful
-2. $UD.onClose(conn => ())  //The websocket connection is closed
-3. $UD.onError(conn => ())  //websocket connection error
-4. $UD.onAdd(message => ())     //Receive event "cmd": "add" from UlanziDeck
-5. $UD.onParamFromApp(message => ())  //Receive event "cmd": "paramfromapp" from UlanziDeck
-6. $UD.onParamFromPlugin(message => ())  //Receive event "cmd": "paramfromplugin" from UlanziDeck
-7. $UD.onRun(message => ())  //Receive event "cmd": "run" from UlanziDeck
-8. $UD.onSetActive(message => ())  //Receive event "cmd": "setactive" from UlanziDeck
-9. $UD.onClear(message => ())  //Receive event "cmd": "clear" from UlanziDeck
-10. $UD.onSelectdialog(message => ())  //Receive event "cmd": "selectdialog" from UlanziDeck.Used to receive the results of selecting files/folders
+---
 
+## Receive Events (UlanziStudio → Plugin)
+
+### Connection Events
+
+```js
+$UD.onConnected(conn => {})   // WebSocket connected successfully
+$UD.onClose(conn => {})       // WebSocket connection closed
+$UD.onError(conn => {})       // WebSocket error
 ```
 
-#### <span id="title-6">6. Send Events(plugin->UlanziDeck)</span>
+### Button / Key Events
+
+```js
+// Action was added to a key; message.param contains saved settings
+$UD.onAdd(message => {})
+
+// Key was triggered (single click confirmed); main entry point for plugin logic
+$UD.onRun(message => {})
+
+// Key press started (fires before run; use for long-press detection)
+$UD.onKeyDown(message => {})
+
+// Key press released
+$UD.onKeyUp(message => {})
+
+// Action active state changed; message.active = true/false
+$UD.onSetActive(message => {})
+
+// Action removed from one or more keys; message.param is an array, each item has .context
+$UD.onClear(message => {})
+```
+
+### Dial / Encoder Events
+
+```js
+$UD.onDialDown(message => {})         // Dial pressed
+$UD.onDialUp(message => {})           // Dial released
+$UD.onDialRotate(message => {})       // Any rotation; message.rotateEvent = 'left' | 'right' | 'hold-left' | 'hold-right'
+$UD.onDialRotateLeft(message => {})       // Rotated left (not held)
+$UD.onDialRotateRight(message => {})      // Rotated right (not held)
+$UD.onDialRotateHoldLeft(message => {})   // Rotated left while pressed
+$UD.onDialRotateHoldRight(message => {}) // Rotated right while pressed
+```
+
+### Param / Config Events
+
+```js
+// Host pushed params to the plugin when a key is configured
+$UD.onParamFromApp(message => {})
+
+// Host forwarded params sent by the plugin (paramfromplugin echo)
+$UD.onParamFromPlugin(message => {})
+```
+
+### Settings Events
+
+```js
+// Triggered after getSettings() or setSettings(); message.settings contains saved data
+$UD.onDidReceiveSettings(message => {})
+
+// Triggered after getGlobalSettings() or setGlobalSettings()
+$UD.onDidReceiveGlobalSettings(message => {})
+```
+
+### Cross-Page Communication Events
+
+```js
+// Main service: receives data sent by PropertyInspector via sendToPlugin()
+$UD.onSendToPlugin(message => {})
+
+// PropertyInspector: receives data sent by main service via sendToPropertyInspector()
+$UD.onSendToPropertyInspector(message => {})
+```
+
+### Dialog Result
+
+```js
+// Result of selectFileDialog() or selectFolderDialog(); message.path is the selected path
+$UD.onSelectdialog(message => {})
+```
+
+---
+
+## Send Events (Plugin → UlanziStudio)
+
+### Set Button Icon
 
 ```js
 /**
- * Send  parameters to the UlanziDeck
- * @param {object} settings Required | parameters
- * @param {object} context Optional | Unique value。It is not required to be passed. It does not need to be passed when it is sent from the action page. It must be passed when it is sent from the main service.
-*/
-1. $UD.sendParamFromPlugin(settings, context) 
+ * Use a state index defined in manifest.json States array
+ * @param {string} context  Required | Unique key for the target button
+ * @param {number} state    Required | Index into the States array
+ * @param {string} text     Optional | Text to overlay on the icon
+ */
+$UD.setStateIcon(context, state, text)
 
 /**
- * Set icon - use the icon list number in the configuration, please refer to manifest.json.
- * @param {string} context Required | Unique value, the  ulanzideck-plugin-sdk library in the received message will be automatically spliced ​​and given.
- * @param {number} state Required | Icon list number
- * @param {string} text Optional | Whether the icon displays text
-*/
-2. $UD.setStateIcon(context, state, text) 
-
-
-  /**
- * Set icon - use custom icon
- * @param {string} context Required | Unique value, the  ulanzideck-plugin-sdk library in the received message will be automatically spliced ​​and given.
- * @param {string} data Required | icon in base64 format
- * @param {string} text Optional | Whether the icon displays text
-*/
-3. $UD.setBaseDataIcon(context, data, text) 
-
+ * Use a custom image (base64)
+ * @param {string} context  Required
+ * @param {string} data     Required | Base64-encoded image (PNG/JPG/SVG)
+ * @param {string} text     Optional
+ */
+$UD.setBaseDataIcon(context, data, text)
 
 /**
- * Set icon-use local image file
- * @param {string} context Required | Unique value, the  ulanzideck-plugin-sdk library in the received message will be automatically spliced ​​and given.
- * @param {string} path  Required | Local image path, supports opening URL links under the plugin root directory (links starting with / ./)
- * @param {string} text Optional | Whether the icon displays text
-*/
-4. $UD.setPathIcon(context, path, text) 
-
-
-/**
- * Set icon - use custom gif
- * @param {string} context Required | Unique value, the  ulanzideck-plugin-sdk library in the received message will be automatically spliced ​​and given.
- * @param {string} gifdata Required | Base64 encoded data of custom gif
- * @param {string} text Optional | Whether the icon displays text
-*/
-5. $UD.setGifDataIcon(context, gifdata, text) 
-
-
-
-  /**
- * Set icon - use local gif file
- * @param {string} context Required | Unique value, the  ulanzideck-plugin-sdk library in the received message will be automatically spliced ​​and given.，
- * @param {string} gifdata  Required | Local gif image path, supports opening URL links under the plugin root directory (links starting with / ./)
- * @param {string} text Optional | Whether the icon displays text
-*/
-6. $UD.setGifPathIcon(context, gifpath, text) 
-
+ * Use a local image file path
+ * @param {string} context  Required
+ * @param {string} path     Required | Relative path from plugin root
+ * @param {string} text     Optional
+ */
+$UD.setPathIcon(context, path, text)
 
 /**
- * A toast message pops up on the requesting UlanziDeck
- *  @param {string} msg Required | Window level message prompt
-*/
-7. $UD.toast(msg) 
+ * Use a custom animated GIF (base64)
+ * @param {string} context  Required
+ * @param {string} gifdata  Required | Base64-encoded GIF data
+ * @param {string} text     Optional
+ */
+$UD.setGifDataIcon(context, gifdata, text)
 
 /**
- * Request the UlanziDeck to pop up a selection dialog box: select file
- *  @param {string} filter Optional | File filter. Filter file type, such as "filter": "image(*.jpg *.png *.gif)" or filter file file(*.txt *.json) etc.
- * Please receive the selection result of this request through the onSelectdialog event
-*/
-8. $UD.selectFileDialog(filter) 
+ * Use a local GIF file path
+ * @param {string} context  Required
+ * @param {string} gifpath  Required | Relative path from plugin root
+ * @param {string} text     Optional
+ */
+$UD.setGifPathIcon(context, gifpath, text)
+```
 
+### Send Parameters
+
+```js
+/**
+ * Send config params to the host (main service → host → PropertyInspector, or reverse)
+ * @param {object} settings  Required
+ * @param {string} context   Required when called from main service
+ */
+$UD.sendParamFromPlugin(settings, context)
 
 /**
- * Request the UlanziDeck to pop up a selection dialog box: select a folder
- * Please receive the selection result of this request through the onSelectdialog event
-*/
-9. $UD.selectFolderDialog() 
-
-
-/**
- * Request the UlanziDeck to use the browser to open the url
- * @param {string} url Required | Supports remote paths and local paths, supports opening url links under the plug-in root directory (links starting with / ./)
- *                                It can only be the basic path and cannot take parameters. If you need to take parameters, please set them in the param value.
- * @param {local} boolean Optional | true if it is a local path
- * @param {object} param Optional | Parameter values of the path.
-*/
-10. $UD.openUrl(url, local, param)
-
+ * Main service → PropertyInspector: pass-through data (not saved by host)
+ * @param {object} settings  Required
+ * @param {string} context   Required | Target action's context
+ */
+$UD.sendToPropertyInspector(settings, context)
 
 /**
- * Request the UlanziDeck to display a pop-up window; After the pop-up window, test.html needs to actively close it, and test to window.close() to notify the pop-up window to close
- *  @param {string} url Required | Local HTML path. It can only be the basic path and cannot take parameters. If you need to take parameters, please set them in the param value.
- * @param {string} width Optional | Window width, default 200
- * @param {string} height Optional | Window height, default 200
- * @param {string} x Optional | The x coordinate of the window. If no value is passed, it will be centered by default.
- * @param {string} y Optional | The y coordinate of the window. If no value is passed, it will be centered by default.
- * @param {object} param Optional | Parameter values of the path.
-*/
-11. $UD.openView(url, width = 200, height = 200, x , y, param)
+ * PropertyInspector → main service: pass-through data (not saved by host)
+ * @param {object} settings  Required
+ */
+$UD.sendToPlugin(settings)
+```
 
+### Settings Persistence
 
+```js
+/**
+ * Save action-specific settings. Triggers didReceiveSettings on both ends.
+ * Note: settings are NOT saved when the action is inactive.
+ * @param {object} settings  Required
+ * @param {string} context   Required when called from main service
+ */
+$UD.setSettings(settings, context)
 
+/**
+ * Request saved action settings. Response arrives via onDidReceiveSettings.
+ * @param {string} context   Required when called from main service
+ */
+$UD.getSettings(context)
+
+/**
+ * Save plugin-wide global settings. Triggers didReceiveGlobalSettings on all connected pages.
+ * @param {object} settings  Required
+ * @param {string} context   Optional
+ */
+$UD.setGlobalSettings(settings, context)
+
+/**
+ * Request global settings. Response arrives via onDidReceiveGlobalSettings.
+ * @param {string} context   Optional
+ */
+$UD.getGlobalSettings(context)
+```
+
+### System Functions
+
+```js
+/**
+ * Show a toast notification on the UlanziStudio host application
+ * @param {string} msg  Required
+ */
+$UD.toast(msg)
+
+/**
+ * Show an error indicator on the button (brief animation)
+ * @param {string} context  Required when called from main service
+ */
+$UD.showAlert(context)
+
+/**
+ * Write a message to the plugin log file
+ * Log path: ~/AppData/Roaming/Ulanzi/UlanziStudio/logs/{mainServiceUUID}.log
+ * @param {string} msg    Required
+ * @param {string} level  Optional | 'info' | 'debug' | 'warn' | 'error' (default: 'info')
+ */
+$UD.logMessage(msg, level)
+
+/**
+ * Trigger an OS-level hotkey
+ * Mac: Use ^, ⌘, ⌥, ⇧ as modifiers (e.g. '⌘C')
+ * Windows: Use Ctrl+C style (e.g. 'Ctrl+C')
+ * @param {string} key  Required
+ */
+$UD.hotkey(key)
+
+/**
+ * Open a URL in the system browser
+ * @param {string}  url    Required | Cannot include query params; pass them via `param`
+ * @param {boolean} local  Optional | true if local file path
+ * @param {object}  param  Optional | Query params
+ */
+$UD.openUrl(url, local, param)
+
+/**
+ * Open a local HTML file as a popup window
+ * Close from inside by calling window.close()
+ * @param {string} url    Required | Local HTML path (no query params; use `param`)
+ * @param {number} width  Optional | Default 200
+ * @param {number} height Optional | Default 200
+ * @param {number} x      Optional | Window x position; centered if omitted
+ * @param {number} y      Optional | Window y position; centered if omitted
+ * @param {object} param  Optional | Params passed to the HTML file
+ */
+$UD.openView(url, width, height, x, y, param)
+
+/**
+ * Open a file picker dialog
+ * @param {string} filter  Optional | e.g. 'image(*.jpg *.png *.gif)' or 'file(*.txt *.json)'
+ * Result is returned via onSelectdialog
+ */
+$UD.selectFileDialog(filter)
+
+/**
+ * Open a folder picker dialog
+ * Result is returned via onSelectdialog
+ */
+$UD.selectFolderDialog()
+```
+
+---
+
+## Utils API
+
+`Utils` is a singleton exported from `index.js`.
+
+```js
+/**
+ * Get the plugin root directory path (the folder ending with *.ulanziPlugin)
+ * Compatible with Windows and macOS
+ * @returns {string}
+ */
+Utils.getPluginPath()
+
+/**
+ * Get the current operating system type
+ * @returns {'windows' | 'mac'}
+ */
+Utils.getSystemType()
+
+/**
+ * Normalize a language code to a supported locale string
+ * e.g. 'zh-CN' → 'zh_CN', 'en-US' → 'en'
+ * @param {string} ln
+ * @returns {string}
+ */
+Utils.adaptLanguage(ln)
+
+/**
+ * Safely parse a JSON string; returns false on failure
+ * @param {string} jsonString
+ * @returns {object|false}
+ */
+Utils.parseJson(jsonString)
+
+/**
+ * Debounce a function call
+ * @param {function} fn
+ * @param {number}   wait  Delay in ms (default: 150)
+ * @returns {function}
+ */
+Utils.debounce(fn, wait)
+
+/**
+ * Get a nested property value using a dot-separated key path
+ * Supports array notation: 'list[0].name'
+ */
+Utils.getProperty(obj, dotSeparatedKeys, defaultValue)
 ```

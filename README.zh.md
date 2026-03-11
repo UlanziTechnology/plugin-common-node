@@ -1,265 +1,457 @@
-# ulanzideck-plugin-sdk node版本
-
+# ulanzistudio-plugin-sdk-node
 
 <p align="start">
    <a href="./README.md">English</a> | <strong>简体中文</strong>
 </p>
 
 ## 简介
-我们依据插件开发协议，封装了与上位机的WebSocket连接及相关的通信事件。这样简化了开发流程，使开发者仅需通过简单的事件调用即可实现与上位机的通信，从而能更专注于插件功能的开发。
 
+ulanzistudio-plugin-sdk 封装了与 UlanziStudio 上位机的 WebSocket 连接及相关通信事件，简化了开发流程。开发者只需通过简单的事件调用即可实现与上位机的通信，从而更专注于插件功能的开发。
 
-```bash
-当前版本根据 Ulanzi JS 插件开发协议-V1.2.2 来编写
-```
+> 当前版本根据 **Ulanzi JS 插件开发协议 - V2.1.2** 编写。
 
+`manifest.json` 配置参考，请查看 **[manifest.zh.md](https://github.com/UlanziTechnology/UlanziDeckPlugin-SDK/blob/main/manifest.zh.md)**。
 
-## 文件介绍
-```bash
-plugin-common-node   //通用node包
-├── libs
-│   ├── constants.js      //上位机的事件常量，无需二次编写
-│   ├── randomPort.js      //生成随机端口
-│   ├── utils.js          //一些常用方法的封装
-│   └── ulanziApi.js    //包括 ulanzi所有事件的封装，socket的连接
-├── index.js  //入口文件
-```
+---
 
-
-## 使用
-
-### 一些说明和约定
-
-1. 插件库的主服务（例app.js）会一直与上位机连接，用于做主要功能，包括上位机icon的更新等。
-
-2. 插件库的配置项（例inspector.html），配置项我们后续称为action。切换功能按键之后就会被销毁，不宜做功能处理。主要用于发送配置项到上位机和同步上位机数据。
-
-3. 为了统一管理，我们的插件包的名称为 com.ulanzi.插件名.ulanziPlugin
-
-4. 为了通用库的正常使用，主服务连接的uuid我们约定长度是4。例：com.ulanzi.ulanzideck.插件名
-
-5. 配置项连接的uuid要大于4用于区分。例：com.ulanzi.ulanzideck.插件名.插件action
-
-6. 在使用node来做主服务时，为了避免端口冲突，请通过 plugin-common-node 提供的 RandomPort 来生成端口。具体可查看[<a href="#title-2">2. 生成随机端口</a>]
-
-7. 由于本地的node环境和上位机node环境运行的区别，以及程序打包之后获取本地路径会出现一些的bug，因此我们提供Utils.getPluginPath()方法来获取插件根目录的本地路径，大家按需使用。具体可查看[<a href="#title-3">3. 获取插件根目录的路径</a>]
-
-### 使用步骤
-
-```bash
-SDK(node版本)的具体使用和文件夹规范，可以查看 demo/com.ulanzi.teamspeak5.ulanziPlugin 的实现。
-以下简单介绍通用库的使用：
-```
-#### * 特殊参数 context
-由于一个action功能会配置到多个按键key上，因此common库为大家拼接了一个唯一值context。在我们创建功能实例的时候，只需保存唯一值context。若需要更新数据时，再根据对应的唯一值context，即可将消息发送到对应的key值上。
-```bash
-1. 特殊参数context, 是common库拼接出的唯一值，它连同接收到的message一起传递给主服务和action。
-
-2. context的拼接规则是 uuid + '___' + key + '___' + actionid，由对应的$UD.encodeContext(msg)生成。
-
-3. 同时我们提供 $UD.decodeContext(context) 来解构唯一值，返回 { uuid, key, actionid }。
-
-4. 由于clear事件的param是数组形式，因此clear的context拼接在param里。请大家做clear处理时，注意循环获取。
+## 文件目录
 
 ```
+plugin-common-node/
+├── libs/
+│   ├── constants.js   // 冻结的事件名常量（Events.*），供 SDK 内部使用
+│   ├── randomPort.js  // 生成随机 WebSocket 端口，并将 ws-port.js 写入插件根目录供 HTML 页面读取
+│   ├── utils.js       // 工具方法：插件路径、系统类型检测、JSON 解析等
+│   └── ulanziApi.js   // SDK 主类，封装所有 UlanziStudio 事件与 WebSocket 连接
+├── apiTypes.d.ts      // TypeScript 类型定义，用于 IDE 自动补全
+└── index.js           // 入口文件，导出 UlanziApi、Utils、RandomPort
+```
 
-#### 1. 下载引用
+---
 
-1. 将plugin-common-node下载到本地，并将文件夹复制到运行目录下。
-2. plugin-common-node 基于 ws ，因此需要在项目根目录中安装ws依赖包。
-3. 然后根据文件夹的位置来引用即可。
+## 说明与约定
 
+1. **主服务**（`app.js`）始终与 UlanziStudio 保持连接，负责插件核心逻辑、接收 action 的参数变更并更新图标状态。
 
-#### <span id="title-2">2. 生成随机端口</span>
-调用随机生成接口的方法getPort()之后，将在插件主服务下会自动生成ws-port.js ，该js文件内容为 window.__port = 端口号;
-action的html可以通过引入'ws-port.js"文件，获得主服务的端口，连接到node主服务
+2. **Action / 配置项**（`inspector.html`）在用户切换按键后会被销毁，应保持轻量——仅用于发送和接收配置参数。
 
+3. 插件包命名规则：`com.ulanzi.{插件名}.ulanziPlugin`
+
+4. **主服务 UUID** 必须恰好包含 **4** 个以点分隔的段：
+   `com.ulanzi.ulanzistudio.{插件名}`
+
+5. **Action UUID** 必须包含 **超过 4** 个段，以与主服务区分：
+   `com.ulanzi.ulanzistudio.{插件名}.{actionName}`
+
+6. 使用 Node.js 作为主服务时，请通过 `RandomPort` 生成端口，避免插件间端口冲突。详见 [2. 生成随机端口](#2-生成随机端口)。
+
+7. 使用 `Utils.getPluginPath()` 获取插件根目录路径，可兼容本地 Node 环境与上位机打包的 Node 环境之间的差异。详见 [3. 获取插件根目录路径](#3-获取插件根目录路径)。
+
+---
+
+## 使用方法
+
+### 特殊参数：`context`
+
+由于同一个 action 可以被分配到多个按键上，SDK 会为每个按键实例生成一个唯一的 **`context`** 字符串，并附加到每条接收到的消息中。
+
+- **格式：** `uuid + '___' + key + '___' + actionid`
+- **编码：** `$UD.encodeContext(msg)` → 返回 context 字符串
+- **解码：** `$UD.decodeContext(context)` → 返回 `{ uuid, key, actionid }`
+- 对于 `clear` 事件，`context` 被拼接在 `param` 数组的每个元素中。处理时请遍历 `message.param` 逐项获取。
+
+---
+
+### 1. 安装
+
+```bash
+npm install ws
+```
+
+将 `plugin-common-node` 文件夹复制到插件运行目录，然后引入：
 
 ```js
-import { RandomPort } from './actions/plugin-common-node/index.js';
-
-const generatePort = new RandomPort(); 
-
-//生成随机端口
-const port = generatePort.getPort(); 
-
+import UlanziApi, { Utils, RandomPort } from './plugin-common-node/index.js';
 ```
 
+---
 
-#### <span id="title-3">3. 获取插件根目录的路径</span>
+### 2. 生成随机端口
 
-Utils.getPluginPath()方法可以获取插件根目录的本地路径，兼容Windows和Mac系统，大家按需使用。
+当 Node.js 作为主服务时，需要一个 WebSocket 服务端口供配置项 HTML 页面连接。在启动时调用一次 `getPort()`——它会生成随机端口，并将其写入插件根目录的 `ws-port.js` 文件中。HTML 页面引入该文件后即可读取端口号。
 
 ```js
-import { Utils } from './actions/plugin-common-node/index.js';
+import { RandomPort } from './plugin-common-node/index.js';
 
-//获取根目录文件路径
-const _pluginPath = Utils.getPluginPath()
-
-console.log('Plugin path: ', _pluginPath)
-
+const randomPort = new RandomPort();
+const port = randomPort.getPort(); // 生成端口并写入 ws-port.js
 ```
 
-#### 4. 连接上位机
-以下简单展示一些方法的使用，具体可查看[<a href="#title-5">5. 接收事件 上位机->插件</a>][<a href="#title-6">6. 发送事件 插件->上位机</a>]
+在配置项 HTML 中，连接前先引入生成的文件：
+
+```html
+<script src="../../ws-port.js"></script>
+<script>
+  $UD.connect('com.ulanzi.ulanzistudio.myplugin.myaction', window.__port);
+</script>
+```
+
+`RandomPort` 构造函数接受可选的 `minPort`（默认 `49152`）和 `maxPort`（默认 `65535`）参数。
+
+---
+
+### 3. 获取插件根目录路径
+
+`Utils.getPluginPath()` 返回插件根目录（以 `ulanziPlugin` 结尾的文件夹）的绝对路径，兼容 Windows 和 macOS。
+
 ```js
-  import { UlanzideckApi } from './actions/plugin-common-node/index.js';;
+import { Utils } from './plugin-common-node/index.js';
 
-  const $UD = new UlanzideckApi();
-  //连接socket，连接成功后，会触发事件onConnected
-  $UD.connect('com.ulanzi.ulanzideck.teamspeak5');
+const pluginPath = Utils.getPluginPath();
+console.log('插件根目录：', pluginPath);
 
-  $UD.onConnected(conn => {
-    //表示已连接
-  })
+// 示例：读取本地配置文件
+import { promises as fs } from 'fs';
+const config = JSON.parse(await fs.readFile(`${pluginPath}/config.json`, 'utf8'));
+```
 
-  //接收action拖入键盘的事件
-  $UD.onAdd( message => {
-    //保存action实例
-  })
+---
 
-  //接收action初始化参数
-  $UD.onParamFromApp( message => {
-      //保存action初始化参数
-  })
+### 4. 连接上位机
 
+由上位机启动时，连接参数通过 `process.argv` 传入：
+- `process.argv[2]` → 地址（默认 `127.0.0.1`）
+- `process.argv[3]` → 端口（默认 `3906`）
+- `process.argv[4]` → 语言（默认 `en`）
 
-  //插件清除
-  $UD.onClear( message => {
-     //实现功能，清除插件
-    if(message.param){
-      for(let i = 0; i<message.param.length; i++){
-        const context = message.param[i].context
-        console.log('===context clear', context)
+```js
+import UlanziApi from './plugin-common-node/index.js';
 
-      }
+const $UD = new UlanziApi();
+
+// 连接，argv 参数优先于默认值
+$UD.connect('com.ulanzi.ulanzistudio.myplugin');
+
+$UD.onConnected(conn => {
+  console.log('已连接');
+});
+
+$UD.onAdd(message => {
+  // action 被分配到按键；message.context 是唯一的按键标识
+  const context = message.context;
+});
+
+$UD.onParamFromApp(message => {
+  // 上位机推送已保存的参数；使用 message.param
+});
+
+$UD.onClear(message => {
+  // message.param 是数组，context 在每个元素中
+  if (message.param) {
+    for (const item of message.param) {
+      console.log('已清除 context：', item.context);
     }
-  })
-
-  //配置icon
-  function serIcon(context, data, text){
-    $UD.setBaseDataIcon(context, data, text) 
   }
-
-
+});
 ```
 
-#### <a id="title-5">5. 接收事件 上位机->插件</a>
+---
+
+## 接收事件（上位机 → 插件）
+
+### 连接事件
+
 ```js
-/**
- * 监听websocket连接事件，以及上位机发出的事件
-*/
-1. $UD.onConnected(conn => ())  //websocket连接成功
-2. $UD.onClose(conn => ())  // websocket 断开连接
-3. $UD.onError(conn => ())  //websocket 错误
-4. $UD.onAdd(message => ())     //接收上位机发出 "cmd": "add" 的事件
-5. $UD.onParamFromApp(message => ())  //接收上位机发出 "cmd": "paramfromapp" 的事件
-6. $UD.onParamFromPlugin(message => ())  //接收上位机发出 "cmd": "paramfromplugin" 的事件
-7. $UD.onRun(message => ())  //接收上位机发出 "cmd": "run" 的事件
-8. $UD.onSetActive(message => ())  //接收上位机发出 "cmd": "setactive" 的事件
-9. $UD.onClear(message => ())  //接收上位机发出 "cmd": "clear" 的事件
-10. $UD.onSelectdialog(message => ())  //接收上位机返回的 "cmd": "selectdialog" 的事件，用于接收选择文件/文件夹的结果
-
-
+$UD.onConnected(conn => {})   // WebSocket 连接成功
+$UD.onClose(conn => {})       // WebSocket 连接断开
+$UD.onError(conn => {})       // WebSocket 错误
 ```
 
-#### <a id="title-6">6. 发送事件 插件->上位机</a>
+### 按键事件
+
+```js
+// action 被添加到按键；message.param 包含已保存的设置
+$UD.onAdd(message => {})
+
+// 按键触发（单击确认）；插件逻辑的主入口
+$UD.onRun(message => {})
+
+// 按键按下（在 run 之前触发；可用于长按检测）
+$UD.onKeyDown(message => {})
+
+// 按键释放
+$UD.onKeyUp(message => {})
+
+// action 激活状态变化；message.active = true/false
+$UD.onSetActive(message => {})
+
+// action 从一个或多个按键上移除；message.param 是数组，每项包含 .context
+$UD.onClear(message => {})
+```
+
+### 旋钮 / 编码器事件
+
+```js
+$UD.onDialDown(message => {})             // 旋钮按下
+$UD.onDialUp(message => {})               // 旋钮释放
+$UD.onDialRotate(message => {})           // 任意旋转；message.rotateEvent = 'left' | 'right' | 'hold-left' | 'hold-right'
+$UD.onDialRotateLeft(message => {})       // 向左旋转（未按住）
+$UD.onDialRotateRight(message => {})      // 向右旋转（未按住）
+$UD.onDialRotateHoldLeft(message => {})   // 按住向左旋转
+$UD.onDialRotateHoldRight(message => {})  // 按住向右旋转
+```
+
+### 参数 / 配置事件
+
+```js
+// 按键配置时，上位机向插件推送参数
+$UD.onParamFromApp(message => {})
+
+// 上位机转发插件发送的参数（paramfromplugin 回调）
+$UD.onParamFromPlugin(message => {})
+```
+
+### Settings 事件
+
+```js
+// 调用 getSettings() 或 setSettings() 后触发；message.settings 包含已保存的数据
+$UD.onDidReceiveSettings(message => {})
+
+// 调用 getGlobalSettings() 或 setGlobalSettings() 后触发
+$UD.onDidReceiveGlobalSettings(message => {})
+```
+
+### 跨页面通信事件
+
+```js
+// 主服务：接收配置项通过 sendToPlugin() 发送的数据
+$UD.onSendToPlugin(message => {})
+
+// 配置项：接收主服务通过 sendToPropertyInspector() 发送的数据
+$UD.onSendToPropertyInspector(message => {})
+```
+
+### 对话框结果
+
+```js
+// selectFileDialog() 或 selectFolderDialog() 的结果；message.path 为选中路径
+$UD.onSelectdialog(message => {})
+```
+
+---
+
+## 发送事件（插件 → 上位机）
+
+### 设置按键图标
 
 ```js
 /**
- * 向上位机发送配置参数
- * @param {object} settings 必传 | 配置参数
- * @param {object} context 可选 | 唯一值。非必传，由action页面发出时可以不传，由主服务发出必传
-*/
-1. $UD.sendParamFromPlugin(settings, context) 
+ * 使用 manifest.json States 数组中定义的状态编号
+ * @param {string} context  必传 | 目标按键的唯一标识
+ * @param {number} state    必传 | States 数组的索引
+ * @param {string} text     可选 | 叠加在图标上的文字
+ */
+$UD.setStateIcon(context, state, text)
 
 /**
- * 设置图标-使⽤配置⾥的图标列表编号，请对照manifest.json。
- * @param {string} context 必传 |唯一值, 接收到的message里面common库会自动拼接给出
- * @param {number} state 必传 | 图标列表编号，
- * @param {string} text 可选 | icon是否显示文字
-*/
-2. $UD.setStateIcon(context, state, text) 
-
-
-  /**
- * 设置图标-使⽤⾃定义图标
- * @param {string} context 必传 |唯一值,每个message里面common库会自动拼接给出
- * @param {string} data 必传 | base64格式的icon
- * @param {string} text 可选 | icon是否显示文字
-*/
-3. $UD.setBaseDataIcon(context, data, text) 
-
+ * 使用自定义图片（base64）
+ * @param {string} context  必传
+ * @param {string} data     必传 | Base64 编码的图片（PNG/JPG/SVG）
+ * @param {string} text     可选
+ */
+$UD.setBaseDataIcon(context, data, text)
 
 /**
- * 设置图标-使⽤本地图片文件
- * @param {string} context 必传 |唯一值,每个message里面common库会自动拼接给出
- * @param {string} path  必传 | 本地图片路径，⽀持打开插件根⽬录下的url链接（以/ ./ 起始的链接）
- * @param {string} text 可选 | icon是否显示文字
-*/
-4. $UD.setPathIcon(context, path, text) 
-
-
-/**
- * 设置图标-使⽤⾃定义的动图
- * @param {string} context 必传 |唯一值,每个message里面common库会自动拼接给出
- * @param {string} gifdata  必传 | ⾃定义gif的base64编码数据
- * @param {string} text 可选 | icon是否显示文字
-*/
-5. $UD.setGifDataIcon(context, gifdata, text) 
-
-
-
-  /**
- * 设置图标-使⽤本地gif⽂件
- * @param {string} context 必传 |唯一值,每个message里面common库会自动拼接给出，
- * @param {string} gifdata  必传 | 本地gif图片路径，⽀持打开插件根⽬录下的url链接（以/ ./ 起始的链接）
- * @param {string} text 可选 | icon是否显示文字
-*/
-6. $UD.setGifPathIcon(context, gifpath, text) 
-
+ * 使用本地图片文件路径
+ * @param {string} context  必传
+ * @param {string} path     必传 | 相对插件根目录的路径
+ * @param {string} text     可选
+ */
+$UD.setPathIcon(context, path, text)
 
 /**
- * 请求上位机弹出Toast消息提⽰
- *  @param {string} msg 必传 | 窗口级消息提示
-*/
-7. $UD.toast(msg) 
+ * 使用自定义动图（base64）
+ * @param {string} context  必传
+ * @param {string} gifdata  必传 | Base64 编码的 GIF 数据
+ * @param {string} text     可选
+ */
+$UD.setGifDataIcon(context, gifdata, text)
 
 /**
- * 请求上位机弹出选择对话框:选择文件
- *  @param {string} filter 可选 | 文件过滤器。筛选文件的类型，例如 "filter": "image(*.jpg *.png *.gif)" 或者 筛选文件 file(*.txt *.json) 等
- * 该请求的选择结果请通过 onSelectdialog 事件接收
-*/
-8. $UD.selectFileDialog(filter) 
+ * 使用本地 GIF 文件路径
+ * @param {string} context  必传
+ * @param {string} gifpath  必传 | 相对插件根目录的路径
+ * @param {string} text     可选
+ */
+$UD.setGifPathIcon(context, gifpath, text)
+```
 
+### 发送参数
+
+```js
+/**
+ * 向上位机发送配置参数（主服务 → 上位机 → 配置项，或反向）
+ * @param {object} settings  必传
+ * @param {string} context   由主服务发出时必传
+ */
+$UD.sendParamFromPlugin(settings, context)
 
 /**
- * 请求上位机弹出选择对话框:选择文件夹
- * 该请求的选择结果请通过 onSelectdialog 事件接收
-*/
-9. $UD.selectFolderDialog() 
-
-
-/**
-   * 请求上位机使⽤浏览器打开url
-   * @param {string} url 必传 | 直接远程地址和本地地址，⽀持打开插件根⽬录下的url链接（以/ ./ 起始的链接）。
-   *                            只能是基本路径，不能带参数，需要带参数请设置在param值里面
-   * @param {local} boolean 可选 | 若为本地地址为true
-   * @param {object} param 可选 | 路径的参数值
-  */
-10. $UD.openUrl(url, local, param)
-
+ * 主服务 → 配置项：透传数据（不由上位机保存）
+ * @param {object} settings  必传
+ * @param {string} context   必传 | 目标 action 的 context
+ */
+$UD.sendToPropertyInspector(settings, context)
 
 /**
- * 请求上位机机显⽰弹窗；弹窗后，test.html需要主动关闭，测试到window.close()可以通知弹窗关闭
- *  @param {string} url 必传 | 本地html路径。只能是基本路径，不能带参数，需要带参数请设置在param值里面
- * @param {string} width 可选 | 窗口宽度，默认200
- * @param {string} height 可选 | 窗口高度，默认200
- * @param {string} x 可选 | 窗口x坐标，不传值默认居中
- * @param {string} y 可选 | 窗口y坐标，不传值默认居中
- * @param {object} param 可选 | 路径的参数值
-*/
-11. $UD.openView(url, width = 200, height = 200, x , y , param)
+ * 配置项 → 主服务：透传数据（不由上位机保存）
+ * @param {object} settings  必传
+ */
+$UD.sendToPlugin(settings)
+```
 
+### Settings 持久化
 
+```js
+/**
+ * 保存 action 级别的设置。两端均会触发 didReceiveSettings。
+ * 注意：action 未激活时设置不会被保存。
+ * @param {object} settings  必传
+ * @param {string} context   由主服务发出时必传
+ */
+$UD.setSettings(settings, context)
+
+/**
+ * 请求已保存的 action 设置。响应通过 onDidReceiveSettings 返回。
+ * @param {string} context   由主服务发出时必传
+ */
+$UD.getSettings(context)
+
+/**
+ * 保存插件全局设置。所有已连接页面均会触发 didReceiveGlobalSettings。
+ * @param {object} settings  必传
+ * @param {string} context   可选
+ */
+$UD.setGlobalSettings(settings, context)
+
+/**
+ * 请求全局设置。响应通过 onDidReceiveGlobalSettings 返回。
+ * @param {string} context   可选
+ */
+$UD.getGlobalSettings(context)
+```
+
+### 系统功能
+
+```js
+/**
+ * 在 UlanziStudio 上位机显示 Toast 提示
+ * @param {string} msg  必传
+ */
+$UD.toast(msg)
+
+/**
+ * 在按键上显示错误指示（短暂动画）
+ * @param {string} context  由主服务发出时必传
+ */
+$UD.showAlert(context)
+
+/**
+ * 向插件日志文件写入消息
+ * 日志路径：~/AppData/Roaming/Ulanzi/UlanziStudio/logs/{主服务UUID}.log
+ * @param {string} msg    必传
+ * @param {string} level  可选 | 'info' | 'debug' | 'warn' | 'error'（默认：'info'）
+ */
+$UD.logMessage(msg, level)
+
+/**
+ * 触发系统级快捷键
+ * Mac：使用 ^、⌘、⌥、⇧ 作为修饰键（如 '⌘C'）
+ * Windows：使用 Ctrl+C 格式（如 'Ctrl+C'）
+ * @param {string} key  必传
+ */
+$UD.hotkey(key)
+
+/**
+ * 用系统浏览器打开 URL
+ * @param {string}  url    必传 | 不能包含查询参数，请通过 param 传递
+ * @param {boolean} local  可选 | 本地文件路径时为 true
+ * @param {object}  param  可选 | 查询参数
+ */
+$UD.openUrl(url, local, param)
+
+/**
+ * 以弹窗形式打开本地 HTML 文件
+ * 在 HTML 内部调用 window.close() 可关闭弹窗
+ * @param {string} url    必传 | 本地 HTML 路径（不含查询参数，请用 param 传递）
+ * @param {number} width  可选 | 默认 200
+ * @param {number} height 可选 | 默认 200
+ * @param {number} x      可选 | 窗口 x 坐标；不传则居中
+ * @param {number} y      可选 | 窗口 y 坐标；不传则居中
+ * @param {object} param  可选 | 传递给 HTML 文件的参数
+ */
+$UD.openView(url, width, height, x, y, param)
+
+/**
+ * 打开文件选择对话框
+ * @param {string} filter  可选 | 如 'image(*.jpg *.png *.gif)' 或 'file(*.txt *.json)'
+ * 结果通过 onSelectdialog 返回
+ */
+$UD.selectFileDialog(filter)
+
+/**
+ * 打开文件夹选择对话框
+ * 结果通过 onSelectdialog 返回
+ */
+$UD.selectFolderDialog()
+```
+
+---
+
+## Utils API
+
+`Utils` 是从 `index.js` 导出的单例对象。
+
+```js
+/**
+ * 获取插件根目录路径（以 *.ulanziPlugin 结尾的文件夹）
+ * 兼容 Windows 和 macOS
+ * @returns {string}
+ */
+Utils.getPluginPath()
+
+/**
+ * 获取当前操作系统类型
+ * @returns {'windows' | 'mac'}
+ */
+Utils.getSystemType()
+
+/**
+ * 将语言代码规范化为支持的区域字符串
+ * 例：'zh-CN' → 'zh_CN'，'en-US' → 'en'
+ * @param {string} ln
+ * @returns {string}
+ */
+Utils.adaptLanguage(ln)
+
+/**
+ * 安全解析 JSON 字符串；解析失败时返回 false
+ * @param {string} jsonString
+ * @returns {object|false}
+ */
+Utils.parseJson(jsonString)
+
+/**
+ * 对函数进行防抖处理
+ * @param {function} fn
+ * @param {number}   wait  延迟时间，单位 ms（默认：150）
+ * @returns {function}
+ */
+Utils.debounce(fn, wait)
+
+/**
+ * 通过点分隔的键路径获取嵌套属性值
+ * 支持数组下标表示法：'list[0].name'
+ */
+Utils.getProperty(obj, dotSeparatedKeys, defaultValue)
 ```
