@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 
-class RandomPort {
+export default class RandomPort {
 
     constructor(minPort = 49152, maxPort = 65535) {
         this.minPort = minPort;
@@ -59,5 +59,3 @@ class RandomPort {
      
 
 }
-
-export default RandomPort;

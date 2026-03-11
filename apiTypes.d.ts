@@ -9,7 +9,7 @@ interface ActionProps {
     key: string;
 }
 
-type Cmd = "run" | "add" | "clear" | "paramfromapp" | "paramfromplugin" | "setactive" | "state" | 'openurl' | 'selectdialog';
+type Cmd = "run" | "add" | "clear" | "paramfromapp" | "paramfromplugin" | "setactive" | "state" | "openurl" | "openview" | "selectdialog" | "logMessage" | "hotkey" | "showAlert" | "sendToPropertyInspector" | "sendToPlugin" | "getSettings" | "setSettings" | "didReceiveSettings" | "setGlobalSettings" | "didReceiveGlobalSettings" | "getGlobalSettings" | "keydown" | "keyup" | "dialdown" | "dialup" | "dialrotate";
 interface DeckRespDataBase<TCmd extends Cmd> {
     cmd: TCmd;
     /** 0-成功，非0-失败 */

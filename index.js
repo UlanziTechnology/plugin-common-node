@@ -2,8 +2,8 @@
 
 import Utils from "./libs/utils.js";
 import RandomPort from "./libs/randomPort.js";
-import UlanzideckApi  from './libs/ulanzideckApi.js';
+import UlanziApi  from './libs/ulanziApi.js';
 
-export { Utils , RandomPort , UlanzideckApi }
+export { Utils , RandomPort , UlanziApi }
 
-export default UlanzideckApi
+export default UlanziApi

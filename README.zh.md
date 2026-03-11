@@ -21,7 +21,7 @@ plugin-common-node   //通用node包
 │   ├── constants.js      //上位机的事件常量，无需二次编写
 │   ├── randomPort.js      //生成随机端口
 │   ├── utils.js          //一些常用方法的封装
-│   └── ulanzideckApi.js    //包括 ulanzi所有事件的封装，socket的连接
+│   └── ulanziApi.js    //包括 ulanzi所有事件的封装，socket的连接
 ├── index.js  //入口文件
 ```
 

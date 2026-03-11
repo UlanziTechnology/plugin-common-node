@@ -20,7 +20,7 @@ plugin-common-node   //ulanzideck-plugin-sdk node package
 │   ├── constants.js      //Event constants of the UlanziDeck
 │   ├── randomPort.js      //Generate a random port for the node service
 │   ├── utils.js          //Encapsulation of some common methods
-│   └── ulanzideckApi.js    //This includes the encapsulation of all UlanziDeck events, websocket connection
+│   └── ulanziApi.js    //This includes the encapsulation of all UlanziDeck events, websocket connection
 ├── index.js  //Entry file
 ```
 

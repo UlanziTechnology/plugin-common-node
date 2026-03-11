@@ -155,6 +155,13 @@ class UlanziUtils {
 	
 	}
 
+	// 获取运行环境系统类型
+	getSystemType(){
+		return process.platform === 'win32' ? 'windows' : 'mac';
+
+	}
+
+
   /**
    * Logs a message 
    * @param {any} msg
