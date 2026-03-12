@@ -128,11 +128,15 @@ class UlanziUtils {
 	adaptLanguage(ln) {
 		let userLanguage = ln;
 		if (ln.indexOf('zh') == 0) {
-			userLanguage = 'zh_CN'
+			if(ln.indexOf('CN') > -1){
+				userLanguage = 'zh_CN'
+			}else{
+				userLanguage = 'zh_HK'
+			}
 		} else if (ln.indexOf('en') == 0) {
 			userLanguage = 'en'
 		} else if (userLanguage.indexOf('-') !== -1) {
-			userLanguage = userLanguage.split('-')[0];
+			userLanguage = userLanguage.replace(/-/g, '_');
 		}
 
 		return userLanguage
