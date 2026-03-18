@@ -17,7 +17,7 @@ For `manifest.json` configuration reference, see **[manifest.md](https://github.
 ## File Directory
 
 ```
-plugin-common-node/
+ulanzi-api/
 ├── libs/
 │   ├── constants.js   // Frozen event-name constants (Events.*) used throughout the SDK
 │   ├── randomPort.js  // Generates a random WebSocket port and writes ws-port.js for HTML pages to consume
@@ -68,10 +68,10 @@ Because the same action can be assigned to multiple keys, the SDK generates a un
 npm install ws
 ```
 
-Copy the `plugin-common-node` folder into your plugin's runtime directory, then import from it:
+Copy the `ulanzi-api` folder into your plugin's runtime directory, then import from it:
 
 ```js
-import UlanziApi, { Utils, RandomPort } from './plugin-common-node/index.js';
+import UlanziApi, { Utils, RandomPort } from './ulanzi-api/index.js';
 ```
 
 ---
@@ -81,7 +81,7 @@ import UlanziApi, { Utils, RandomPort } from './plugin-common-node/index.js';
 When Node.js is the main service, it needs a WebSocket server port that the PropertyInspector HTML pages can connect to. Call `getPort()` once at startup — it generates a random port and writes it to `ws-port.js` in the plugin root directory. The HTML pages include this file to read the port.
 
 ```js
-import { RandomPort } from './plugin-common-node/index.js';
+import { RandomPort } from './ulanzi-api/index.js';
 
 const randomPort = new RandomPort();
 const port = randomPort.getPort(); // generates port and writes ws-port.js
@@ -105,7 +105,7 @@ In the PropertyInspector HTML, include the generated file before connecting:
 `Utils.getPluginPath()` returns the absolute path to the plugin root directory (the folder ending with `ulanziPlugin`). Compatible with Windows and macOS.
 
 ```js
-import { Utils } from './plugin-common-node/index.js';
+import { Utils } from './ulanzi-api/index.js';
 
 const pluginPath = Utils.getPluginPath();
 console.log('Plugin root:', pluginPath);
@@ -125,7 +125,7 @@ Connection parameters are read from `process.argv` when launched by the host app
 - `process.argv[4]` → language (default `en`)
 
 ```js
-import UlanziApi from './plugin-common-node/index.js';
+import UlanziApi from './ulanzi-api/index.js';
 
 const $UD = new UlanziApi();
 
