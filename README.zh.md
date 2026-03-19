@@ -455,3 +455,35 @@ Utils.debounce(fn, wait)
  */
 Utils.getProperty(obj, dotSeparatedKeys, defaultValue)
 ```
+
+---
+
+## 调试
+
+启动上位机应用时可附加以下参数开启调试。
+
+**可用参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `--log` | 将日志写入文件 |
+| `--logLevel` | 设置日志级别 |
+| `--pluginLoad` | 开启插件加载钩子 |
+| `--webRemoteDebug` | 启用 HTML 插件的 WebView 远程调试，默认端口 9292，通过浏览器打开 `localhost:9292` 进行调试，可调试所有已加载的 HTML 插件 |
+| `--webRemotePort=<端口>` | 自定义 WebView 调试端口，例：`--webRemotePort=9292` |
+| `--nodeRemoteDebug` | 启用 Node.js 插件远程调试，需在插件 `manifest.json` 中配置 `"Inspect": "--inspect=[host:port]"`，默认地址 `127.0.0.1:9229`；在 Chrome 中打开 `chrome://inspect`，非默认端口时需在 Discover network targets 中手动添加对应端口 |
+| `--doubleClick` | 启用双击检测 |
+
+**Windows：**
+
+右键 Ulanzi Studio 快捷方式 → 属性 → 在**目标**栏末尾追加启动参数：
+```
+"C:\...\Ulanzi Studio.exe" --log --webRemoteDebug
+```
+
+**macOS：**
+```bash
+open /Applications/Ulanzi\ Studio.app --args --log ---webRemoteDebug 
+```
+
+> 注意：使用 `open` 命令启动时，应用可能无法获得系统辅助功能权限，会导致快捷键功能失效。若遇此问题，请改用 `./UlanziStudio` 直接启动。

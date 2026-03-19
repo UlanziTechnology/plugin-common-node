@@ -455,3 +455,35 @@ Utils.debounce(fn, wait)
  */
 Utils.getProperty(obj, dotSeparatedKeys, defaultValue)
 ```
+
+---
+
+## Debugging
+
+Launch the host application with the following flags to enable debugging.
+
+**Available flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--log` | Write logs to file |
+| `--logLevel` | Set log verbosity |
+| `--pluginLoad` | Enable plugin load hook |
+| `--webRemoteDebug` | Enable WebView remote debugging for HTML plugins. Default port 9292 — open `localhost:9292` in the browser to debug all loaded HTML plugins |
+| `--webRemotePort=<port>` | Override WebView debug port, e.g. `--webRemotePort=9292` |
+| `--nodeRemoteDebug` | Enable remote debugging for Node.js plugins. Requires `"Inspect": "--inspect=[host:port]"` in the plugin's `manifest.json`. Default address `127.0.0.1:9229`. Open `chrome://inspect` in Chrome; for non-default ports, add the port under Discover network targets |
+| `--doubleClick` | Enable double-click detection |
+
+**Windows:**
+
+Right-click the Ulanzi Studio shortcut → Properties → append flags to the end of the **Target** field:
+```
+"C:\...\Ulanzi Studio.exe" --log --webRemoteDebug
+```
+
+**macOS:**
+```bash
+open /Applications/Ulanzi\ Studio.app --args --log --webRemoteDebug
+```
+
+> Note: the `open` command may prevent the app from obtaining Accessibility permissions, which can disable hotkey functionality. Use `./UlanziStudio` directly if hotkeys are not working.
