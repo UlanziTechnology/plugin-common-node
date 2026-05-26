@@ -20,7 +20,7 @@ For `manifest.json` configuration reference, see **[manifest.md](https://github.
 ulanzi-api/
 ├── libs/
 │   ├── constants.js   // Frozen event-name constants (Events.*) used throughout the SDK
-│   ├── randomPort.js  // Generates a random WebSocket port and writes ws-port.js for HTML pages to consume
+│   ├── randomPort.js  // Generates a random port for a self-hosted main service and writes ws-port.js for PropertyInspector pages
 │   ├── utils.js       // Helper utilities: plugin path, system type detection, JSON parsing, etc.
 │   └── ulanziApi.js   // Main SDK class. Encapsulates all UlanziStudio events and WebSocket connection.
 ├── apiTypes.d.ts      // TypeScript type definitions for IDE autocompletion
@@ -43,7 +43,7 @@ ulanzi-api/
 5. An **action UUID** must have **more than 4** segments to be distinguished from the main service:
    `com.ulanzi.ulanzistudio.{pluginName}.{actionName}`
 
-6. When using Node.js as the main service, use `RandomPort` to avoid port conflicts between plugins. See [2. Generate Random Port](#2-generate-random-port).
+6. When a PropertyInspector page needs to bypass UlanziStudio mediation and connect directly to the plugin's own Node.js main service, use `RandomPort` to generate a random listening port for that service and write it to `ws-port.js` for the PropertyInspector page to read. Plugins that communicate only through UlanziStudio's standard event flow do not need it. See [2. Generate Random Port](#2-generate-random-port).
 
 7. Use `Utils.getPluginPath()` to get the plugin root directory path — it handles differences between local Node and the host's packaged Node environment. See [3. Get Plugin Root Path](#3-get-plugin-root-path).
 
@@ -78,13 +78,22 @@ import UlanziApi, { Utils, RandomPort } from './ulanzi-api/index.js';
 
 ### 2. Generate Random Port
 
-When Node.js is the main service, it needs a WebSocket server port that the PropertyInspector HTML pages can connect to. Call `getPort()` once at startup — it generates a random port and writes it to `ws-port.js` in the plugin root directory. The HTML pages include this file to read the port.
+`RandomPort` is intended for architectures where the PropertyInspector page needs to **connect to the main service by itself**. For example, the main service may start a local WebSocket / HTTP service, and the PropertyInspector page may bypass UlanziStudio mediation to exchange connection state, account information, real-time lists, or other temporary data directly with that service. In this case, call `getPort()` once when the main service starts, then use the returned port to start your own service. `RandomPort` also writes the port to `ws-port.js` in the plugin root directory, so the PropertyInspector HTML page can include that file, read `window.__port`, and connect to the service.
+
+If the PropertyInspector and main service synchronize parameters entirely through UlanziStudio's standard events, you do not need `RandomPort`.
 
 ```js
 import { RandomPort } from './ulanzi-api/index.js';
+import { WebSocketServer } from 'ws';
 
 const randomPort = new RandomPort();
 const port = randomPort.getPort(); // generates port and writes ws-port.js
+
+// The main service starts a local service on this port for the PropertyInspector page to connect to.
+const wss = new WebSocketServer({ host: '127.0.0.1', port });
+wss.on('connection', socket => {
+  socket.send(JSON.stringify({ type: 'ready' }));
+});
 ```
 
 In the PropertyInspector HTML, include the generated file before connecting:
@@ -92,11 +101,15 @@ In the PropertyInspector HTML, include the generated file before connecting:
 ```html
 <script src="../../ws-port.js"></script>
 <script>
-  $UD.connect('com.ulanzi.ulanzistudio.myplugin.myaction', window.__port);
+  const socket = new WebSocket(`ws://127.0.0.1:${window.__port}`);
 </script>
 ```
 
-`RandomPort` constructor accepts optional `minPort` (default `49152`) and `maxPort` (default `65535`).
+Notes:
+
+- `RandomPort` only generates a port and writes `ws-port.js`; it does not create a WebSocket / HTTP service automatically.
+- Call `getPort()` once during main service startup, then let the PropertyInspector page connect after your service is listening.
+- The default range is the dynamic port range `49152`-`65535`, which helps reduce port conflicts between plugins. To restrict the range, pass `minPort` and `maxPort` to the constructor.
 
 ---
 
