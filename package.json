@@ -15,7 +15,7 @@
     "sdapi"
   ],
   "author": "ulanzi",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "dependencies": {
     "ws": "^8.18.0"
   }
